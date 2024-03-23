@@ -1,0 +1,42 @@
+{
+  "name": "node-firebase-crud",
+  "version": "1.0.0",
+  "description": "CRUD apis using express and firebase-db",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon ./index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kushal1402/Node-Firebase-CRUD.git"
+  },
+  "keywords": [
+    "NODE",
+    "FIREBASE",
+    "CRUD",
+    "CREATE",
+    "READ",
+    "UPDATE",
+    "DELETE",
+    "API",
+    "CLOUD",
+    "IMAGE"
+  ],
+  "author": "Kushal",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Kushal1402/Node-Firebase-CRUD/issues"
+  },
+  "homepage": "https://github.com/Kushal1402/Node-Firebase-CRUD#readme",
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.1",
+    "firebase": "^10.9.0",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "nodemon": "^3.1.0"
+  }
+}
