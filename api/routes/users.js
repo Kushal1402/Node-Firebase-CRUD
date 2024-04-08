@@ -14,4 +14,6 @@ router.get("/list", UsersController.getAll);
 
 router.post("/update/:id", upload.single("profile_pic"), UsersController.updateUser);
 
+router.delete("/delete/:id", UsersController.deleteUser);
+
 module.exports = router;

@@ -61,14 +61,43 @@ exports.addUser = async (req, res) => {
 }
 
 exports.getAll = async (req, res) => {
+    let {
+        limit = 10, // Default limit field if not provided
+        searchField,
+        search,
+        sortByField = 'createdAt', // Default sorting field if not provided
+        sortBy = 'desc' // Default sorting order if not provided
+    } = req.query;
+
     try {
-        const response = await usersDb.get();
+        // Method 1
+        // const response = await usersDb.get();
+
+        // Method 2 -> Static Filters
+        // const response = await usersDb.orderBy('createdAt', 'desc').limit(50).get();
+
+        // Method 3 -> Dynamic Filters
+        var query = usersDb;
+        if (search && searchField) {
+            query = query.where(searchField, "==", search);
+        }
+        if (sortByField) {
+            query = query.orderBy(sortByField, sortBy);
+        }
+        // console.log("response:", query);
+
+        const response = await query.limit(parseInt(limit)).get();
 
         const arr = [];
-        let total = 0;
         if (response.empty) {
-            res.status(200).json({ message: "No records found", result: [] });
+            console.log("No records found for query:", req.query);
         } else {
+            // response.forEach((doc) => {
+            //     arr.push({
+            //         id: doc.id,
+            //         ...doc.data()
+            //     });
+            // })
             response.forEach((item) => {
                 const user = new User(
                     item.id,
@@ -83,19 +112,18 @@ exports.getAll = async (req, res) => {
                     new Date(item.data().updatedAt.seconds * 1000),
                 );
                 arr.push(user);
-                total = total + 1;
             });
         };
 
-        return res.status(200).send({
+        return res.status(200).json({
             message: "User details retreived successfully",
             result: arr,
-            count: total
+            count: arr.length
         });
     } catch (error) {
-        console.log(error, "error");
-        return res.status(500).send({
-            message: "Error occured, Please try again"
+        console.error("Error retrieving users:", error);
+        return res.status(500).json({
+            message: "Error occurred, Please try again"
         });
     }
 }
@@ -182,10 +210,21 @@ exports.updateUser = async (req, res) => {
 };
 
 exports.deleteUser = async (req, res) => {
+    const id = req.params.id;
+
     try {
+        const userRef = usersDb.doc(id);
+        const response = await userRef.get();
+        const oldData = response.data();
+
+        if (oldData.profile_pic !== "" && oldData.profile_pic !== null && oldData.profile_pic !== undefined) {
+            await deleteImage(oldData.profile_pic);
+        };
+
+        await usersDb.doc(id).delete();
 
         return res.status(200).send({
-            message: "User details updated successfully",
+            message: "User deleted successfully",
         });
 
     } catch (error) {
