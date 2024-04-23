@@ -16,4 +16,6 @@ router.post("/update/:id", upload.single("profile_pic"), UsersController.updateU
 
 router.delete("/delete/:id", UsersController.deleteUser);
 
+router.get("/csv", UsersController.generateCsv);
+
 module.exports = router;

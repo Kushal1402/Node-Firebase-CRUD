@@ -25,6 +25,8 @@ npm install
 npm start
 ```
 
+## The Node-Api's are also deployed on Render. You can access them with [API_BASE_URL](https://node-firebase-restful-api.onrender.com/).
+
 ## 🤝 Contributing
 Contributions, issues and feature requests are welcome!
 Feel free to check the [issues page](https://github.com/Kushal1402/Node-Firebase-CRUD/issues).

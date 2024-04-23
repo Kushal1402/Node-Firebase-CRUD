@@ -72,3 +72,57 @@ exports.deleteImage = async (imageURL) => {
         return false;
     }
 }
+
+/**
+ * Converts CSV data to a Buffer and uploads it to Firebase Storage.
+ * 
+ * @param {string} csvData - The CSV data as a string.
+ * @param {string} fileName - The name of the file to be saved.
+ * @param {string} fileAltText - Detailed description of the CSV content.
+ * @returns {Promise<string>} A promise that resolves with the download URL of the uploaded file.
+ */
+exports.uploadFile = async (csvData, fileName, fileAltText) => {
+    return new Promise((resolve, reject) => {
+
+        // Convert CSV data to a Buffer
+        const csvBuffer = Buffer.from(csvData);
+
+        // Reference to where the file will be uploaded within Firebase Storage
+        const fileRef = storageRef.child(`users/csv/${fileName}`);
+
+        // Prepare metadata
+        const metadata = {
+            contentType: 'application/octet-stream',
+            customMetadata: {
+                'alt': fileAltText
+            }
+        }
+
+        // Upload CSV to Firebase Storage
+        const uploadTask = fileRef.put(csvBuffer, metadata);
+
+        uploadTask.on('state_changed', snapshot => {
+            var progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            console.log('Upload is ' + progress + '% done');
+            switch (snapshot.state) {
+                case 'paused':
+                    console.log('Upload is paused');
+                    break;
+                case 'running':
+                    console.log('Upload is running');
+                    break;
+            }
+        }, error => {
+            console.error('Error uploading CSV:', error);
+            reject(new Error("Error occurred during file upload"));
+        }, async () => {
+            // Upload completed successfully
+            try {
+                const hostedFileURL = await fileRef.getDownloadURL();
+                resolve(hostedFileURL);
+            } catch (error) {
+                reject(new Error("Error getting download URL"));
+            }
+        });
+    });
+}

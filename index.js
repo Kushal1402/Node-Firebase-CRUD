@@ -15,7 +15,9 @@ const { port } = require("./api/config/config");
 const UsersRoutes = require("./api/routes/users");
 
 app.get('/', (req, res) => {
-    res.send("CRUD api's using node & firebase")
+    return res.json({
+        message: "Welcome to the Node.js REST API using ExpressJS and Firebase"
+    })
 });
 
 app.use("/api/users", UsersRoutes)

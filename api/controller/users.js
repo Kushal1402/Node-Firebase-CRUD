@@ -1,8 +1,10 @@
 const { storage, storageRef, db } = require("../config/firebaseConfig");
 const User = require("../model/users");
-const { uploadImage, deleteImage } = require("../helper");
+const { uploadImage, deleteImage, uploadFile } = require("../helper");
 const niv = require("node-input-validator");
 const usersDb = db.collection('users');
+const moment = require('moment');
+const createCsvStringifier = require('csv-writer').createObjectCsvStringifier;
 
 exports.addUser = async (req, res) => {
 
@@ -90,7 +92,7 @@ exports.getAll = async (req, res) => {
 
         const arr = [];
         if (response.empty) {
-            console.log("No records found for query:", req.query);
+            console.log("No user's found for query:", req.query);
         } else {
             // response.forEach((doc) => {
             //     arr.push({
@@ -141,6 +143,12 @@ exports.getDetail = async (req, res) => {
         const response = await userRef.get();
         const data = response.data();
 
+        if (!data || data === null || data === undefined) {
+            return res.status(500).send({
+                message: `No record mathched with id: ${id}`
+            });
+        };
+
         const result = {
             username: data?.username,
             email: data?.email,
@@ -150,7 +158,7 @@ exports.getDetail = async (req, res) => {
             profile_pic: data?.profile_pic,
             createdAt: new Date(data.createdAt.seconds * 1000),
             updatedAt: new Date(data.updatedAt.seconds * 1000),
-        }
+        };
 
         return res.status(200).send({
             message: "User details retreived successfully",
@@ -166,6 +174,11 @@ exports.getDetail = async (req, res) => {
 
 exports.updateUser = async (req, res) => {
     const id = req.params.id;
+    if (id === null || id === undefined || id === '') {
+        return res.status(404).send({
+            message: "Error occurred, Please try again later",
+        });
+    };
 
     try {
         const {
@@ -187,6 +200,12 @@ exports.updateUser = async (req, res) => {
             const userRef = usersDb.doc(id);
             const response = await userRef.get();
             const oldData = response.data();
+
+            if (!oldData || oldData === null || oldData === undefined) {
+                return res.status(500).send({
+                    message: `No record mathched with id: ${id}`
+                });
+            };
 
             if (oldData.profile_pic !== "" && oldData.profile_pic !== null && oldData.profile_pic !== undefined) {
                 await deleteImage(oldData.profile_pic);
@@ -211,11 +230,22 @@ exports.updateUser = async (req, res) => {
 
 exports.deleteUser = async (req, res) => {
     const id = req.params.id;
+    if (id === null || id === undefined || id === '') {
+        return res.status(404).send({
+            message: "Error occurred, Please try again later",
+        });
+    };
 
     try {
         const userRef = usersDb.doc(id);
         const response = await userRef.get();
         const oldData = response.data();
+
+        if (!oldData || oldData === null || oldData === undefined) {
+            return res.status(500).send({
+                message: `No record mathched with id: ${id}`
+            });
+        };
 
         if (oldData.profile_pic !== "" && oldData.profile_pic !== null && oldData.profile_pic !== undefined) {
             await deleteImage(oldData.profile_pic);
@@ -231,6 +261,105 @@ exports.deleteUser = async (req, res) => {
         console.log(error, "error");
         return res.status(500).send({
             message: "Error occured, Please try again"
+        });
+    }
+}
+
+exports.generateCsv = async (req, res) => {
+    try {
+
+        const response = await usersDb.orderBy("createdAt", "desc").get();
+
+        const arr = [];
+        if (response.empty) {
+            console.log("No user's found");
+        } else {
+            response.forEach((item) => {
+                const local_data = item.data();
+
+                const user = {
+                    id: item.id,
+                    username: local_data.username,
+                    email: local_data.email,
+                    contact_number: `${local_data?.country_code} ${local_data?.phone_number}`,
+                    flag: local_data.flag,
+                    profile_pic: local_data?.profile_pic,
+                    role: local_data.role,
+                    createdAt: new Date(local_data.createdAt.seconds * 1000),
+                    updatedAt: new Date(local_data.updatedAt.seconds * 1000)
+                };
+
+                // Optionally filter out phone_number & country_code here
+                delete user.phone_number;
+                delete user.country_code;
+
+                // Add the combine contact-number here
+                // user.contact_number = `${item.data()?.country_code} ${item.data()?.phone_number}`;
+
+                arr.push(user);
+            });
+        };
+
+        if (arr?.length < 0) {
+            return res.status(500).send({
+                message: "No user's found to print",
+                error: error,
+            });
+        }
+
+        // Getting current date and time using Moment.js
+        const dateTimeString = moment().format("YYYY-MM-DD_HH-mm-ss");
+
+        // Setting FileName
+        const fileName = `NODE_FB_User_List_${dateTimeString}.csv`;
+
+        // Create CSV-String
+        const csvStringifier = createCsvStringifier({
+            header: [
+                { id: 'id', title: 'ID' },
+                { id: 'username', title: 'Name' },
+                { id: 'email', title: 'Email' },
+                { id: 'contact_number', title: 'Phone Number' },
+                { id: 'role', title: 'Role' },
+                { id: 'profile_pic', title: 'Profile Pic' },
+            ]
+        });
+
+        // Create CSV header by joining header strings
+        const csvHeader = csvStringifier.getHeaderString();
+
+        // Create CSV string by joining record strings        
+        const csvString = csvStringifier.stringifyRecords(arr);
+
+        // Combine header row and CSV data
+        const csvData = csvHeader + '\n' + csvString;
+
+        const fileAltText = `User's csv file generated on ${moment().format("DD-MM-YYYY")}`;
+
+        uploadFile(csvData, fileName, fileAltText)
+            .then(hostedFileURL => {
+                return res.status(200).json({
+                    message: "CSV file generated successfully",
+                    generated_file: hostedFileURL,
+                    file_name: fileName
+                });
+            })
+            .catch(error => {
+                console.error("Failed to upload CSV", error);
+                return res.status(500).send({ message: "Failed to generate CSV file" });
+            });
+
+        // return res.status(200).json({
+        //     message: "CSV file generated successfully",
+        //     generated_file: hostedFileURL,
+        //     file_name: fileName
+        // });
+
+    } catch (error) {
+        console.log("CSV generate error", error);
+        return res.status(500).send({
+            message: "Error occurred, Please try again",
+            error: error,
         });
     }
 }
